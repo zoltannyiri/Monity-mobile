@@ -11,6 +11,7 @@ import DashboardScreen from './src/screens/Dashboard/DashboardScreen';
 import SubscriptionsListScreen from './src/screens/Subscriptions/SubscriptionsListScreen';
 import SettingsScreen from './src/screens/Settings/SettingsScreen';
 import SubscriptionDetailScreen from './src/screens/Subscriptions/SubscriptionDetailScreen';
+import SubscriptionFormScreen from './src/screens/Subscriptions/SubscriptionFormScreen';
 
 
 const Stack = createNativeStackNavigator();
@@ -84,6 +85,11 @@ function RootNavigator() {
               headerTintColor: '#ffffff',
               headerShadowVisible: false,
             }}
+          />
+          <Stack.Screen 
+            name="SubscriptionForm" 
+            component={SubscriptionFormScreen} 
+            options={{ title: 'Előfizetés' }} 
           />
         </>
       )}

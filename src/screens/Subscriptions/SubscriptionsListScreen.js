@@ -1,76 +1,50 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, FlatList, TouchableOpacity } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   Text,
   ActivityIndicator,
   Surface,
   Chip,
+  FAB,
+  useTheme,
 } from 'react-native-paper';
 import api from '../../api/api';
 
 export default function SubscriptionsListScreen({ navigation }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const theme = useTheme();
 
-  useEffect(() => {
-    const loadSubscriptions = async () => {
-      try {
-        const res = await api.get('/api/subscriptions');
-        setItems(Array.isArray(res.data) ? res.data : []);
-      } catch (e) {
-        console.log('Subscriptions hiba:', e.message);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // 🔥 Ez biztosítja, hogy ha visszajövünk a Create/Edit képernyőről,
+  // újratöltődik a lista.
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
 
-    loadSubscriptions();
-  }, []);
+      const loadSubscriptions = async () => {
+        try {
+          const res = await api.get('/api/subscriptions');
+          if (isActive) {
+            setItems(Array.isArray(res.data) ? res.data : []);
+          }
+        } catch (e) {
+          console.log('Subscriptions hiba:', e.message);
+        } finally {
+          if (isActive) setLoading(false);
+        }
+      };
 
-  if (loading) {
-    return (
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: '#050816',
-          justifyContent: 'center',
-          alignItems: 'center',
-        }}
-      >
-        <ActivityIndicator />
-        <Text style={{ marginTop: 8, color: '#d1d5f0' }}>
-          Előfizetések betöltése...
-        </Text>
-      </View>
-    );
-  }
+      loadSubscriptions();
 
-  if (!items.length) {
-    return (
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: '#050816',
-          justifyContent: 'center',
-          alignItems: 'center',
-          paddingHorizontal: 24,
-        }}
-      >
-        <Text
-          style={{
-            textAlign: 'center',
-            color: '#e5e7ff',
-          }}
-        >
-          Még nincs egyetlen előfizetés sem. Vedd fel őket a webes Monity-ben,
-          vagy később csinálunk ide is felviteli felületet. 🙂
-        </Text>
-      </View>
-    );
-  }
+      return () => {
+        isActive = false;
+      };
+    }, [])
+  );
 
   const renderItem = ({ item }) => {
-    const dateText = item.nextChargeDate
+    const nextDateText = item.nextChargeDate
       ? new Date(item.nextChargeDate).toLocaleDateString('hu-HU')
       : '-';
 
@@ -93,6 +67,7 @@ export default function SubscriptionsListScreen({ navigation }) {
           <View
             style={{ flexDirection: 'row', justifyContent: 'space-between' }}
           >
+            {/* BAL OLDAL */}
             <View style={{ flex: 1, paddingRight: 8 }}>
               <Text
                 style={{
@@ -111,8 +86,8 @@ export default function SubscriptionsListScreen({ navigation }) {
                   color: '#9ca3ff',
                 }}
               >
-                {item.billingCycle === 'yearly' ? 'Éves' : 'Havi'} • Köv.
-                terhelés: {dateText}
+                {item.billingCycle === 'yearly' ? 'Éves' : 'Havi'} • Köv.:{' '}
+                {nextDateText}
               </Text>
               {item.notes ? (
                 <Text
@@ -127,6 +102,8 @@ export default function SubscriptionsListScreen({ navigation }) {
                 </Text>
               ) : null}
             </View>
+
+            {/* JOBB OLDAL (Ár) */}
             <View style={{ alignItems: 'flex-end' }}>
               <Text
                 style={{
@@ -156,13 +133,62 @@ export default function SubscriptionsListScreen({ navigation }) {
     );
   };
 
+  if (loading) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: '#050816',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      >
+        <ActivityIndicator color="#4c6ef5" />
+        <Text style={{ marginTop: 8, color: '#d1d5f0' }}>
+          Előfizetések betöltése...
+        </Text>
+      </View>
+    );
+  }
+
   return (
-    <View style={{ flex: 1, backgroundColor: '#050816', padding: 16 }}>
+    <View style={{ flex: 1, backgroundColor: '#050816' }}>
       <FlatList
         data={items}
         keyExtractor={(item) => String(item.id)}
         renderItem={renderItem}
+        contentContainerStyle={{ padding: 16, paddingBottom: 80 }}
         showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={{ marginTop: 50, alignItems: 'center' }}>
+            <Text style={{ color: '#e5e7ff', textAlign: 'center' }}>
+              Még nincs felvéve előfizetés.
+            </Text>
+            <Text style={{ color: '#9ca3ff', marginTop: 4 }}>
+              Nyomd meg a + gombot a jobb alsó sarokban!
+            </Text>
+          </View>
+        }
+      />
+
+      {/* LEBEGŐ GOMB (FAB) */}
+      <FAB
+        icon={() => (
+          <View style={{ justifyContent: 'center', alignItems: 'center' }}>
+            <Text style={{ fontSize: 24, color: 'white', fontWeight: 'bold', marginTop: -2 }}>
+              +
+            </Text>
+          </View>
+        )}
+        style={{
+          position: 'absolute',
+          margin: 16,
+          right: 0,
+          bottom: 0,
+          backgroundColor: '#4c6ef5',
+        }}
+        color="white"
+        onPress={() => navigation.navigate('SubscriptionForm')}
       />
     </View>
   );

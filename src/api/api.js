@@ -3,8 +3,8 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ANDROID EMULÁTORRÓL:
-// const API_BASE_URL = 'http://10.0.2.2:4000';
-const API_BASE_URL = 'http://192.168.0.5:4000';
+const API_BASE_URL = 'http://10.0.2.2:4000';
+// const API_BASE_URL = 'http://192.168.0.5:4000';
 
 // Ha később fizikai telefonról akarod tesztelni LAN-on:
 // const API_BASE_URL = 'http://<gép_ip_címe>:4000';

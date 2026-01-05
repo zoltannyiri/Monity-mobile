@@ -1,23 +1,76 @@
-// src/screens/Subscriptions/SubscriptionDetailScreen.js
-import React, { useState } from 'react';
+import React, { useState, useCallback, useLayoutEffect } from 'react';
 import { View, ScrollView } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   Text,
   Surface,
   Button,
   Chip,
-  ActivityIndicator,
   Snackbar,
 } from 'react-native-paper';
 import api from '../../api/api';
 
-export default function SubscriptionDetailScreen({ route }) {
+export default function SubscriptionDetailScreen({ route, navigation }) {
+  // Kezdeti adat a navigációs paraméterekből (hogy ne legyen üres a képernyő betöltéskor)
   const { subscription: initialSub } = route.params;
-
   const [sub, setSub] = useState(initialSub);
+
   const [bumping, setBumping] = useState(false);
   const [errorText, setErrorText] = useState('');
   const [snackbarVisible, setSnackbarVisible] = useState(false);
+
+  // 🔥 SZERKESZTÉS GOMB A FEJLÉCBE
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <Button
+          onPress={() =>
+            // Átadjuk a jelenlegi (lehet, hogy már frissített) sub adatot az űrlapnak
+            navigation.navigate('SubscriptionForm', { subscription: sub })
+          }
+          textColor="#4c6ef5"
+        >
+          Szerkesztés
+        </Button>
+      ),
+    });
+  }, [navigation, sub]);
+
+  // 🔥 ADATFRISSÍTÉS: Ha szerkesztés után visszatérünk, kérjük le újra az adatokat
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+
+      const fetchFreshData = async () => {
+        try {
+          // Feltételezve, hogy van GET /api/subscriptions/:id végpontod,
+          // de ha nincs, akkor lekérhetjük a listát is, vagy csak bízhatunk abban,
+          // hogy a backend gyors.
+          // Mivel a listát gyorsabb cache-elni, most inkább csak frissítjük a state-et
+          // ha a navigáció paraméterei változtak volna, de a legbiztosabb a hálózati kérés:
+          
+          // Ha nincs konkrét ID lekérő végpontod, akkor ezt a részt hagyd ki,
+          // vagy implementáld a backend oldalon a `app.get('/api/subscriptions/:id')`-t.
+          // Alternatíva: Listából szűrés (kevésbé hatékony, de működik):
+          const res = await api.get('/api/subscriptions');
+          if (isActive) {
+            const freshItem = res.data.find((s) => s.id === sub.id);
+            if (freshItem) {
+              setSub(freshItem);
+            }
+          }
+        } catch (e) {
+          console.log('Detail refresh hiba:', e);
+        }
+      };
+
+      fetchFreshData();
+
+      return () => {
+        isActive = false;
+      };
+    }, [sub.id])
+  );
 
   const nextDateText = sub.nextChargeDate
     ? new Date(sub.nextChargeDate).toLocaleDateString('hu-HU')
@@ -28,9 +81,7 @@ export default function SubscriptionDetailScreen({ route }) {
     : null;
 
   const billingLabel =
-    sub.billingCycle === 'yearly'
-      ? 'Éves előfizetés'
-      : 'Havi előfizetés';
+    sub.billingCycle === 'yearly' ? 'Éves előfizetés' : 'Havi előfizetés';
 
   const handleBumpNextCharge = async () => {
     setErrorText('');
@@ -139,9 +190,10 @@ export default function SubscriptionDetailScreen({ route }) {
                 marginTop: 10,
                 fontSize: 13,
                 color: '#d1d5f0',
+                fontStyle: 'italic',
               }}
             >
-              {sub.notes}
+              „{sub.notes}”
             </Text>
           ) : null}
         </Surface>
@@ -183,8 +235,8 @@ export default function SubscriptionDetailScreen({ route }) {
             }}
           >
             A „Következő terhelés eltolása” gomb a jelenlegi dátum alapján
-            lépteti tovább az előfizetést egy új ciklusra
-            ({sub.billingCycle === 'yearly' ? '1 évvel' : '1 hónappal'}).
+            lépteti tovább az előfizetést egy új ciklusra (
+            {sub.billingCycle === 'yearly' ? '1 évvel' : '1 hónappal'}).
           </Text>
 
           {errorText ? (
@@ -221,7 +273,7 @@ export default function SubscriptionDetailScreen({ route }) {
         duration={2500}
         style={{ backgroundColor: '#16a34a' }}
       >
-        Következő terhelés dátuma frissítve.
+        Sikeres frissítés.
       </Snackbar>
     </View>
   );
