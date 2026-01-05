@@ -13,6 +13,8 @@ import {
 } from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker'; // Ha felraktad
 import api from '../../api/api';
+import { Menu } from 'react-native-paper';
+import { Portal } from 'react-native-paper';
 
 export default function SubscriptionFormScreen({ navigation, route }) {
   const theme = useTheme();
@@ -20,7 +22,8 @@ export default function SubscriptionFormScreen({ navigation, route }) {
   // Ha van params.subscription, akkor EDIT mód, amúgy CREATE
   const editingSub = route.params?.subscription;
   const isEditMode = !!editingSub;
-
+  const [showCurrencyMenu, setShowCurrencyMenu] = useState(false);
+  const currencies = ['HUF', 'EUR', 'USD'];
   const [name, setName] = useState(editingSub?.name || '');
   const [price, setPrice] = useState(editingSub?.price?.toString() || '');
   const [currency, setCurrency] = useState(editingSub?.currency || 'HUF');
@@ -124,23 +127,37 @@ export default function SubscriptionFormScreen({ navigation, route }) {
             />
 
             {/* ÁR + PÉNZNEM sor */}
-            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
+            <View style={{ gap: 10, marginBottom: 12 }}>
               <TextInput
-                label="Ár"
-                value={price}
-                onChangeText={setPrice}
-                keyboardType="numeric"
-                mode="outlined"
-                style={{ flex: 2 }}
-              />
-              <TextInput
-                label="Deviza"
-                value={currency}
-                onChangeText={setCurrency} // Később lehetne legördülő
-                mode="outlined"
-                style={{ flex: 1 }}
-                autoCapitalize="characters"
-              />
+  label="Ár"
+  value={price}
+  onChangeText={setPrice}
+  keyboardType="numeric"
+  mode="outlined"
+  style={{ marginBottom: 16 }} // Flex törölve, sima margó hozzáadva
+/>
+
+{/* PÉNZNEM VÁLASZTÓ - Most már külön sorban */}
+<Text style={{ color: '#9ca3ff', marginBottom: 8, fontSize: 14 }}>
+  Pénznem
+</Text>
+<SegmentedButtons
+  value={currency}
+  onValueChange={setCurrency}
+  buttons={[
+    { value: 'HUF', label: 'HUF'},
+    { value: 'EUR', label: 'EUR'},
+    { value: 'USD', label: 'USD'},
+  ]}
+  style={{ marginBottom: 16}}
+  theme={{ 
+    colors: { 
+      secondaryContainer: '#2f3b83', 
+      onSecondaryContainer: '#fff',
+      outline: '#4b5563' 
+    } 
+  }}
+/>
             </View>
 
             {/* CIKLUS */}

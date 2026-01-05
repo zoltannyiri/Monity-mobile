@@ -14,15 +14,14 @@ import { AuthContext } from '../../context/AuthContext';
 
 const screenWidth = Dimensions.get('window').width;
 
-// Segédfüggvény véletlen színekhez a diagram szeleteinek
 const getRandomColor = (index) => {
   const colors = ['#f43f5e', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
   return colors[index % colors.length];
 };
-
 export default function DashboardScreen({ navigation }) {
   const { user, logout } = useContext(AuthContext);
-  
+
+  const [exchangeRate, setExchangeRate] = useState(400);
   const [loading, setLoading] = useState(true);
   const [notifyData, setNotifyData] = useState(null); // Értesítési adatok
   const [chartData, setChartData] = useState([]); // Diagram adatok
@@ -37,14 +36,16 @@ export default function DashboardScreen({ navigation }) {
       const loadData = async () => {
         try {
           // 1. Párhuzamosan lekérjük az értesítéseket ÉS az összes előfizetést
-          const [notifyRes, subsRes] = await Promise.all([
+          const [notifyRes, subsRes, rateRes] = await Promise.all([
             api.get('/api/notifications/preview'),
-            api.get('/api/subscriptions')
+            api.get('/api/subscriptions'),
+            api.get('/api/exchange-rate')
           ]);
 
           if (isActive) {
             setNotifyData(notifyRes.data);
-            processChartData(subsRes.data);
+            setExchangeRate(rateRes.data.rate);
+            processChartData(subsRes.data, rateRes.data.rate);
           }
         } catch (e) {
           console.log('Dashboard load hiba:', e.message);
@@ -62,44 +63,50 @@ export default function DashboardScreen({ navigation }) {
   );
 
   // 🔥 Itt dolgozzuk fel az adatokat a diagramhoz
-  const processChartData = (subscriptions) => {
+  const processChartData = (subscriptions, currentRate) => {
     if (!Array.isArray(subscriptions)) return;
 
     const categoryMap = {};
-    let total = 0;
+    let totalHufPerMonth = 0;
 
     subscriptions.forEach((sub) => {
-      // Ha nincs kategória, legyen "Egyéb"
-      const cat = sub.category ? sub.category.trim() : 'Egyéb';
+      const cat = sub.category || 'Egyéb';
       
-      // Egyszerűsített számítás: mindent havi költségre vetítünk
-      // (Ha éves, osztjuk 12-vel, hogy reális legyen a diagram)
+      // 1. Havi szintre hozás (ha éves az előfizetés, osztjuk 12-vel)
       let monthlyPrice = sub.price;
       if (sub.billingCycle === 'yearly') {
-        monthlyPrice = Math.round(sub.price / 12);
+        monthlyPrice = sub.price / 12;
       }
 
-      if (!categoryMap[cat]) {
-        categoryMap[cat] = 0;
+      // 2. Deviza átszámítás HUF-ra a diagramhoz és az összesítéshez
+      let priceInHuf = monthlyPrice;
+      if (sub.currency === 'EUR') {
+        priceInHuf = monthlyPrice * currentRate;
+      } else if (sub.currency === 'USD') {
+        // Itt egy fix dollár váltót (pl. 355) használunk, vagy a backendből ezt is leküldhetjük
+        priceInHuf = monthlyPrice * (currentRate * 0.92); 
       }
-      categoryMap[cat] += monthlyPrice;
-      total += monthlyPrice;
+
+      // 3. Kategória szerinti gyűjtés
+      if (!categoryMap[cat]) categoryMap[cat] = 0;
+      categoryMap[cat] += Math.round(priceInHuf);
+      
+      // 4. Havi összesen gyűjtése
+      totalHufPerMonth += priceInHuf;
     });
 
-    setTotalMonthly(total);
+    setTotalMonthly(Math.round(totalHufPerMonth));
 
-    // Átalakítás a ChartKit formátumára
+    // Diagram adatok előkészítése
     const chartItems = Object.keys(categoryMap).map((cat, index) => ({
       name: cat,
-      population: categoryMap[cat], // Ez az érték
+      population: categoryMap[cat],
       color: getRandomColor(index),
       legendFontColor: '#e5e7ff',
       legendFontSize: 12,
     }));
 
-    // Csökkenő sorrendbe rendezzük
     chartItems.sort((a, b) => b.population - a.population);
-
     setChartData(chartItems);
   };
 
@@ -145,6 +152,7 @@ export default function DashboardScreen({ navigation }) {
           </Text>
           
           {chartData.length > 0 ? (
+            <>
             <PieChart
               data={chartData}
               width={screenWidth - 60}
@@ -156,8 +164,18 @@ export default function DashboardScreen({ navigation }) {
               backgroundColor={"transparent"}
               paddingLeft={"15"}
               center={[10, 0]}
-              absolute // Ha true, akkor az értéket írja ki, nem százalékot
+              absolute 
             />
+            <Text style={{ 
+              color: '#4b5563', 
+              fontSize: 10, 
+              textAlign: 'center', 
+              marginTop: -10, // A negatív margó miatt közelebb kerül a diagramhoz
+              marginBottom: 10 
+            }}>
+              Alkalmazott árfolyam: 1 EUR = {exchangeRate} HUF (Élő adat)
+            </Text>
+            </>
           ) : (
             <View style={{ height: 150, justifyContent: 'center' }}>
               <Text style={{ color: '#555' }}>Nincs elég adat a diagramhoz.</Text>
@@ -170,6 +188,24 @@ export default function DashboardScreen({ navigation }) {
               {totalMonthly.toLocaleString('hu-HU')} HUF
             </Text>
           </View>
+        </Surface>
+
+        <Surface style={{ 
+          borderRadius: 24, 
+          padding: 18, 
+          marginBottom: 16, 
+          backgroundColor: '#1d264f', // Sötétebb kék a kiemeléshez
+          elevation: 6 
+        }}>
+          <Text variant="labelLarge" style={{ color: '#9ca3ff', marginBottom: 4 }}>
+            Éves várható összköltség
+          </Text>
+          <Text variant="headlineMedium" style={{ color: '#ffffff', fontWeight: '800' }}>
+            {Math.round(totalMonthly * 12).toLocaleString('hu-HU')} HUF
+          </Text>
+          <Text style={{ color: '#9ba0c8', fontSize: 12, marginTop: 4 }}>
+            A jelenlegi előfizetéseid alapján számított 12 havi becslés.
+          </Text>
         </Surface>
 
         {/* Értesítési összegző kártyák (a régi kód) */}

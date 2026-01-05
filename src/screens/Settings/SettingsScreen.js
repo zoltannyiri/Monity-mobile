@@ -1,6 +1,7 @@
 // src/screens/Settings/SettingsScreen.js
 import React, { useEffect, useState } from 'react';
 import { View, ScrollView } from 'react-native';
+import { Alert } from 'react-native';
 import {
   Text,
   TextInput,
@@ -16,6 +17,7 @@ import api from '../../api/api';
 export default function SettingsScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [testingNotify, setTestingNotify] = useState(false);
 
   const [defaultCurrency, setDefaultCurrency] = useState('HUF');
   const [defaultBillingCycle, setDefaultBillingCycle] = useState('monthly');
@@ -52,6 +54,29 @@ export default function SettingsScreen() {
 
     loadSettings();
   }, []);
+
+  const handleSendTest = async () => {
+    try {
+      setTestingNotify(true);
+      const res = await api.post('/api/notifications/send-test');
+      Alert.alert('Siker', res.data.message);
+    } catch (e) {
+      console.log('Teszt hiba:', e.response?.data || e.message);
+      const msg = e.response?.data?.error || 'Nem sikerült elküldeni a tesztet.';
+      Alert.alert('Hiba', msg);
+    } finally {
+      setTestingNotify(false);
+    }
+  };
+
+  const handleFixDates = async () => {
+    try {
+      const res = await api.post('/api/subscriptions/fix-all-dates');
+      Alert.alert('Siker', res.data.message);
+    } catch (e) {
+      Alert.alert('Hiba', 'Nem sikerült a dátumok frissítése.');
+    }
+  };
 
   const handleSave = async () => {
     setErrorText('');
@@ -242,6 +267,35 @@ export default function SettingsScreen() {
             contentStyle={{ paddingVertical: 8 }}
           >
             Beállítások mentése
+          </Button>
+        </Surface>
+        <Surface style={{ borderRadius: 24, padding: 18, backgroundColor: '#111827', elevation: 4, marginTop: 8 }}>
+          <Text style={{ color: '#f9fafb', fontSize: 18, fontWeight: '600', marginBottom: 8 }}>
+            Rendszer tesztelése
+          </Text>
+          <Text style={{ color: '#9ba0c8', fontSize: 13, marginBottom: 16 }}>
+            Ezzel a gombbal azonnali teszt emailt és push értesítést küldhetsz a fiókodhoz tartozó címre.
+          </Text>
+
+          <Button
+            mode="outlined"
+            onPress={handleSendTest}
+            loading={testingNotify}
+            disabled={testingNotify}
+            icon="bell-ring-outline"
+            textColor="#9ca3ff"
+            style={{ borderColor: '#2f3b83', borderRadius: 999 }}
+          >
+            Teszt értesítés küldése
+          </Button>
+
+          <Button 
+            mode="outlined" 
+            onPress={handleFixDates}
+            icon="calendar-sync"
+            style={{ marginTop: 10, borderColor: '#2f3b83' }}
+          >
+            Dátumok szinkronizálása
           </Button>
         </Surface>
       </ScrollView>
