@@ -1,18 +1,12 @@
 import React, { useContext, useState } from 'react';
 import { View, KeyboardAvoidingView, Platform } from 'react-native';
-import {
-  TextInput,
-  Button,
-  Text,
-  Surface,
-  HelperText,
-  useTheme,
-} from 'react-native-paper';
+import { TextInput, Button, Text, Surface, HelperText, useTheme } from 'react-native-paper';
 import { AuthContext } from '../../context/AuthContext';
+import api from '../../api/api';
 
-export default function LoginScreen() {
+export default function LoginScreen({ navigation }) {
   const { login } = useContext(AuthContext);
-  const [email, setEmail] = useState('demo@monity.local');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [errorText, setErrorText] = useState('');
@@ -27,10 +21,17 @@ export default function LoginScreen() {
 
     try {
       setSubmitting(true);
-      await login(email, password);
+      // 🔥 FONTOS: A backend 'identifier' néven várja az emailt/felhasználónevet!
+      const res = await api.post('/api/auth/login', { 
+        identifier: email, 
+        password: password 
+      });
+      
+      // Az AuthContext login függvényét hívjuk
+      await login(res.data.token, res.data.user);
     } catch (err) {
-      console.log(err);
-      setErrorText('Bejelentkezés sikertelen. Ellenőrizd az adataidat vagy a szervert.');
+      console.log('Login hiba:', err.response?.data || err.message);
+      setErrorText(err.response?.data?.error || 'Hibás adatok.');
     } finally {
       setSubmitting(false);
     }
@@ -38,108 +39,26 @@ export default function LoginScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#050816' }}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        {/* Felső hero rész */}
-        <View
-          style={{
-            flex: 1.2,
-            paddingHorizontal: 24,
-            paddingTop: 48,
-            justifyContent: 'flex-end',
-          }}
-        >
-          <Text
-            variant="headlineMedium"
-            style={{
-              color: '#ffffff',
-              fontWeight: '700',
-              marginBottom: 8,
-            }}
-          >
-            Monity
-          </Text>
-          <Text
-            variant="bodyMedium"
-            style={{
-              color: '#a1a1c2',
-              maxWidth: 280,
-            }}
-          >
-            Előfizetések, terhelések, értesítések – egy helyen, átláthatóan.
-          </Text>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={{ flex: 1.2, paddingHorizontal: 24, paddingTop: 48, justifyContent: 'flex-end' }}>
+          <Text variant="headlineMedium" style={{ color: '#fff', fontWeight: '700' }}>Monity</Text>
+          <Text variant="bodyMedium" style={{ color: '#a1a1c2' }}>Minden pénzügyed egy helyen.</Text>
         </View>
 
-        {/* Alsó „card / sheet” rész */}
         <View style={{ flex: 1.4, justifyContent: 'flex-end' }}>
-          <Surface
-            style={{
-              borderTopLeftRadius: 32,
-              borderTopRightRadius: 32,
-              paddingHorizontal: 24,
-              paddingTop: 24,
-              paddingBottom: 32,
-              backgroundColor: theme.colors.surface,
-              elevation: 6,
-            }}
-          >
-            <Text
-              variant="titleMedium"
-              style={{ marginBottom: 12, color: theme.colors.onSurface }}
-            >
-              Bejelentkezés
-            </Text>
+          <Surface style={{ borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, backgroundColor: theme.colors.surface }}>
+            <Text variant="titleMedium" style={{ marginBottom: 12 }}>Bejelentkezés</Text>
+            <TextInput label="Email" value={email} onChangeText={setEmail} mode="outlined" style={{ marginBottom: 12 }} />
+            <TextInput label="Jelszó" value={password} onChangeText={setPassword} secureTextEntry mode="outlined" />
+            
+            {!!errorText && <HelperText type="error">{errorText}</HelperText>}
 
-            <TextInput
-              label="Email"
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              mode="outlined"
-              left={<TextInput.Icon icon="email-outline" />}
-              style={{ marginBottom: 12 }}
-            />
-
-            <TextInput
-              label="Jelszó"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              mode="outlined"
-              left={<TextInput.Icon icon="lock-outline" />}
-              style={{ marginBottom: 4 }}
-            />
-
-            {!!errorText && (
-              <HelperText type="error" visible={true}>
-                {errorText}
-              </HelperText>
-            )}
-
-            <Button
-              mode="contained"
-              onPress={handleSubmit}
-              loading={submitting}
-              disabled={submitting}
-              style={{ marginTop: 16, borderRadius: 999 }}
-              contentStyle={{ paddingVertical: 8 }}
-            >
-              Belépés a Monity-be
+            <Button mode="contained" onPress={handleSubmit} loading={submitting} disabled={submitting} style={{ marginTop: 16 }}>
+              Belépés
             </Button>
-
-            <Text
-              variant="bodySmall"
-              style={{
-                marginTop: 16,
-                color: '#777a99',
-                textAlign: 'center',
-              }}
-            >
-              A belépéssel elfogadod a Monity szolgáltatás használati feltételeit.
-            </Text>
+            <Button onPress={() => navigation.navigate('Register')} textColor="#9ca3ff">
+              Regisztráció
+            </Button>
           </Surface>
         </View>
       </KeyboardAvoidingView>

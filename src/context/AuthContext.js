@@ -1,84 +1,62 @@
-import React, { createContext, useEffect, useState } from 'react';
+import React, { createContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import api from '../api/api';
-import {
-  requestAndRegisterPushToken,
-  setupPushListeners,
-} from '../push/PushTokenService';
-
-
+import { requestAndRegisterPushToken, setupPushListeners } from '../push/PushTokenService';
 
 export const AuthContext = createContext();
 
-export function AuthProvider({ children }) {
-  const [userToken, setUserToken] = useState(null);
+export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [userToken, setUserToken] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // 1. ADATOK BETÖLTÉSE (BOOTSTRAP) - Csak egyszer fut le indításkor
   useEffect(() => {
-    const bootstrap = async () => {
+    const loadStoredData = async () => {
       try {
         const storedToken = await AsyncStorage.getItem('monity_token');
-        if (storedToken) {
+        const storedUser = await AsyncStorage.getItem('monity_user');
+        if (storedToken && storedUser) {
           setUserToken(storedToken);
-          try {
-            const res = await api.get('/api/me');
-            setUser(res.data);
-          } catch (e) {
-            console.log('Nem sikerült usert lekérni bootstrapkor:', e.message);
-          }
+          setUser(JSON.parse(storedUser));
         }
       } catch (e) {
-        console.log('Hiba token betöltésnél:', e.message);
+        console.log('Betöltési hiba:', e);
       } finally {
         setIsLoading(false);
       }
     };
-
-    bootstrap();
+    loadStoredData();
   }, []);
 
+  // 2. PUSH LISTENERS - Ezt csak egyszer, az app indulásakor kell elindítani
   useEffect(() => {
     setupPushListeners();
-  }, []);
+  }, []); // Üres tömb: csak egyszer fut le az app életciklusában
 
+  // 3. TOKEN REGISZTRÁCIÓ - Akkor fut le, ha megváltozik a userToken (belépés/kilépés)
   useEffect(() => {
     if (userToken) {
       requestAndRegisterPushToken();
     }
-  }, [userToken]);
+  }, [userToken]); // Csak userToken változásakor fut
 
- const login = async (email, password) => {
-  const res = await api.post('/api/auth/login', { email, password });
-
-  const token = res.data?.token;
-  const userData = res.data?.user;
-
-  if (!token) {
-    throw new Error('Nincs token a login válaszban.');
-  }
-
-  // 🔹 Itt logoljuk ki, hogy Postmanbe másolhasd
-  console.log('Monity JWT token (Postmanhez):', token);
-
-  await AsyncStorage.setItem('monity_token', token);
-  setUserToken(token);
-  setUser(userData || null);
-};
+  const login = async (token, userData) => {
+    setUserToken(token);
+    setUser(userData);
+    await AsyncStorage.setItem('monity_token', token);
+    await AsyncStorage.setItem('monity_user', JSON.stringify(userData));
+  };
 
   const logout = async () => {
-    await AsyncStorage.removeItem('monity_token');
     setUserToken(null);
     setUser(null);
+    await AsyncStorage.removeItem('monity_token');
+    await AsyncStorage.removeItem('monity_user');
   };
 
-  const value = {
-    userToken,
-    user,
-    isLoading,
-    login,
-    logout,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
+  return (
+    <AuthContext.Provider value={{ user, userToken, login, logout, isLoading }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};

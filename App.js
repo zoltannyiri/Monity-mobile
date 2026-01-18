@@ -12,6 +12,7 @@ import SubscriptionsListScreen from './src/screens/Subscriptions/SubscriptionsLi
 import SettingsScreen from './src/screens/Settings/SettingsScreen';
 import SubscriptionDetailScreen from './src/screens/Subscriptions/SubscriptionDetailScreen';
 import SubscriptionFormScreen from './src/screens/Subscriptions/SubscriptionFormScreen';
+import RegisterScreen from './src/screens/Auth/RegisterScreen';
 
 
 const Stack = createNativeStackNavigator();
@@ -39,11 +40,22 @@ function RootNavigator() {
   return (
     <Stack.Navigator>
       {userToken == null ? (
-        <Stack.Screen
-          name="Login"
-          component={LoginScreen}
-          options={{ headerShown: false }}
-        />
+        <>
+          <Stack.Screen
+            name="Login"
+            component={LoginScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="Register" 
+            component={RegisterScreen} 
+            options={{ 
+              title: 'Új fiók', 
+              headerStyle: { backgroundColor: '#050816' }, 
+              headerTintColor: '#fff' 
+            }} 
+          />
+        </>
       ) : (
         <>
           <Stack.Screen

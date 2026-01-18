@@ -131,7 +131,7 @@ export default function DashboardScreen({ navigation }) {
           <View>
             <Text variant="bodySmall" style={{ color: '#9ca3ff' }}>Üdv újra,</Text>
             <Text variant="titleMedium" style={{ color: '#ffffff', fontWeight: '600' }}>
-              {user?.email?.split('@')[0] || 'Felhasználó'}
+              {user?.username || 'Felhasználó'}
             </Text>
           </View>
           <Button 
