@@ -9,7 +9,14 @@ import { Platform } from 'react-native';
 // const API_BASE_URL = Platform.OS === 'android' 
 //     ? 'http://10.0.2.2:4000'
 //     : 'http://localhost:4000';
-const API_BASE_URL = 'http://192.168.0.2:4000';
+// const API_BASE_URL = 'http://192.168.0.2:4000'; // helyi hálózati IP cím
+
+// RENDER.COM-on hostolt backend
+const API_BASE_URL = 'https://monity-backend.onrender.com';
+
+
+
+
 // const API_BASE_URL = 'http://192.168.0.5:4000';
 
 // Ha később fizikai telefonról akarod tesztelni LAN-on:
