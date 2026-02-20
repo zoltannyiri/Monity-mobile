@@ -21,7 +21,7 @@ const API_BASE_URL = 'https://monity-backend.onrender.com';
 
 // Ha később fizikai telefonról akarod tesztelni LAN-on:
 // const API_BASE_URL = 'http://<gép_ip_címe>:4000';
-
+  
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 15000,

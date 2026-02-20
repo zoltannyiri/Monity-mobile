@@ -1,4 +1,26 @@
 {
-  "name": "Monity",
-  "displayName": "Monity"
+  "expo": {
+    "name": "Monity",
+    "slug": "monity",
+    "version": "1.0.0",
+    "android": {
+      "package": "com.monity",
+      "googleServicesFile": "./google-services.json"
+    },
+    "plugins": [
+      "@react-native-community/datetimepicker",
+      "@react-native-firebase/app",
+      "@react-native-firebase/messaging",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 34,
+            "targetSdkVersion": 34,
+            "buildToolsVersion": "34.0.0"
+          }
+        }
+      ]
+    ]
+  }
 }
